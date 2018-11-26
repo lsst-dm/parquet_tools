@@ -28,17 +28,15 @@ Module that interfaces between pandas csv contertor and the actual csv file.
 
 The module is used to handle csv files that associated with a scheme that
 allows null integer or string values. These cannot be handled by pandas.
-This module substitutes a known value for such values and adds set the
-bollean value to true in the column used to indicate whether the value in
-that column is null or not (see csv2pq_schema.py for details).
+This module substitutes a known value for such values and adds a correspoding
+bolean column whose value indicates whther the associated column is null
+(i.e. true if it is and false otherwise).
 """
 
 import csv
-import os
-import sys
 
-from csv2pq_cmdinfo import CmdInfo # noqa, flake8 issue
-from csv2pq_utils import Fatal
+from parquet_tools.csv2pq.cmdinfo import CmdInfo
+from parquet_tools.common.utils import fatal
 
 
 # *****************************************************************************
@@ -48,11 +46,11 @@ from csv2pq_utils import Fatal
 class Csv2Csv(object):
     def __init__(self, file_):
         self.csvF = file_
-        self.cmtc = CmdInfo.OPT['cmt']
-        self.nilV = CmdInfo.OPT['nil']
-        self.nanV = CmdInfo.OPT['nan']
+        self.cmtc = CmdInfo.opt.cmt
+        self.nilV = CmdInfo.opt.nil
+        self.nanV = CmdInfo.opt.nan
         self.nRow = 0
-        self.sepC = CmdInfo.OPT['sep']
+        self.sepC = CmdInfo.opt.sep
         self.csvrdr = csv.reader(self.csvF, delimiter=self.sepC,
                                  quoting=csv.QUOTE_NONE)
 
@@ -63,23 +61,22 @@ class Csv2Csv(object):
         return getattr(self.csvF, attr)
 
     def read(self, size):
+        """In:  size - number of bytes to read, the argument is ignored. We
+                   only read a single row at a time for the csv object as it
+                   knows how to handle varying sized reads.
+           Out: Returns the row or the null string if no more rows remain.
+        """
 
-        # The csv reader throws an exception at EOF. Of course, it can throw
-        # one at any time. We know we are at EOF if the file pointer is at EOF
+        # Get next row unless we have no more rows, then we are done.
         #
         row = []
         try:
             row = next(self.csvrdr)
+        except StopIteration:
+            return ''      # On EOF return the null string
         except Exception:  # We don't care what it is
-            if os.fstat(self.csvF.fileno()).st_size != self.csvF.tell():
-                e = sys.exc_info()[1]
-                Fatal(0, 'Unable to convert csv row ' + str(self.nRow)
-                      + ' in file ' + self.csvF.name, e)
-
-        # On EOF we must return a null string. Returning None (the correct
-        # value) causes pandas to crash, sigh. Pass through commented lines.
-        #
-        if not row: return ''
+            fatal(0, 'Unable to convert csv row', self.nRow,
+                  'in file', self.csvF.name)
 
         # Look at all columns that we need to preprocess null values
         #
@@ -99,19 +96,22 @@ class Csv2Csv(object):
 
 
 # *****************************************************************************
-# *                            g e t H a n d l e r                            *
+# *                           g e t _ h a n d l e r                           *
 # *****************************************************************************
 
-def getHandler(infile):
-    "Return an input handler for a csv file."
+def get_handler(infile):
+    """Return an input handler for a csv file.
+    In:  infile - the path o the csv file.
+    Out: Returns an instance of the csv file handling object upon success and
+         exits the program upon failure.
+    """
 
     # Open the csv file we will be actually reading
     #
     try:
         csvfile = open(infile, newline=None)
-    except Exception:
-        e = sys.exc_info()[1]
-        Fatal(0, 'Unable to open input file '+infile, e)
+    except OSError:
+        fatal(0, 'Unable to open input file', infile)
 
     # Create a wrapper for this file and return it to be used for
     # reading augmented rows.
