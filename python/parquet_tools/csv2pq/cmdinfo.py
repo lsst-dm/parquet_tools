@@ -33,7 +33,7 @@ __all__ = ['CmdInfo']
 
 import argparse
 
-from parquet_tools.common.typeinfo import TypeInfo
+from ..common.typeinfo import TypeInfo
 
 
 # *****************************************************************************
@@ -162,14 +162,6 @@ def define_command():
 
 class CmdInfo:
 
-    # Column information
-    #
-    cNameMax = 0      # The length of the longest column name
-    colNames = []     # List of column names
-    colNVChk = []     # The columns that need to be checked for a null value
-    colSpecs = []     # List of [column name, SQL types, pandas type]
-    colTypes = {}     # Dictionary of column name to pandas type
-
     # File information
     #
     fIN = []          # List of csv files to process
@@ -192,7 +184,7 @@ class CmdInfo:
     skipRows = None
 
     @classmethod
-    def parseCommandline(cls):
+    def parse_commandline(cls):
         "Parse the command line using the command definition."
 
         cls.opt = define_command().parse_args()

@@ -1,5 +1,5 @@
 # *****************************************************************************
-# *                     c s v 2 p q _ h a n d l e r . p y                     *
+# *                            h a n d l e r . p y                            *
 # *****************************************************************************
 #
 # This file is part of parquet_tools.
@@ -29,14 +29,14 @@ Module that interfaces between pandas csv contertor and the actual csv file.
 The module is used to handle csv files that associated with a scheme that
 allows null integer or string values. These cannot be handled by pandas.
 This module substitutes a known value for such values and adds a correspoding
-bolean column whose value indicates whther the associated column is null
+bolean column whose value indicates whether the associated column is null
 (i.e. true if it is and false otherwise).
 """
 
 import csv
 
-from parquet_tools.csv2pq.cmdinfo import CmdInfo
-from parquet_tools.common.utils import fatal
+from .cmdinfo import CmdInfo
+from ..common.utils import fatal
 
 
 # *****************************************************************************
@@ -44,8 +44,9 @@ from parquet_tools.common.utils import fatal
 # *****************************************************************************
 
 class Csv2Csv(object):
-    def __init__(self, file_):
+    def __init__(self, file_, nvchk_):
         self.csvF = file_
+        self.nilC = nvchk_
         self.cmtc = CmdInfo.opt.cmt
         self.nilV = CmdInfo.opt.nil
         self.nanV = CmdInfo.opt.nan
@@ -80,7 +81,7 @@ class Csv2Csv(object):
 
         # Look at all columns that we need to preprocess null values
         #
-        for i in CmdInfo.colNVChk:
+        for i in self.nilC:
             if row[i] == self.nilV:
                 row.append('true')
                 row[i] = self.nanV
@@ -99,9 +100,10 @@ class Csv2Csv(object):
 # *                           g e t _ h a n d l e r                           *
 # *****************************************************************************
 
-def get_handler(infile):
+def get_handler(infile, nvchk):
     """Return an input handler for a csv file.
     In:  infile - the path o the csv file.
+         nvchk  - the columns which should be checked for a null value
     Out: Returns an instance of the csv file handling object upon success and
          exits the program upon failure.
     """
@@ -116,4 +118,4 @@ def get_handler(infile):
     # Create a wrapper for this file and return it to be used for
     # reading augmented rows.
     #
-    return Csv2Csv(csvfile)
+    return Csv2Csv(csvfile, nvchk)

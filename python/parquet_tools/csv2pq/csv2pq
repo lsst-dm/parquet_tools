@@ -44,9 +44,9 @@ from parquet_tools.csv2pq.cmdinfo import CmdInfo
 
 from parquet_tools.csv2pq.handler import get_handler
 
-from parquet_tools.csv2pq.schema import chk_schema, get_schema
+from parquet_tools.csv2pq.schema import Schema
 
-from parquet_tools.common.utils import einfo, eprint, fatal
+from parquet_tools.common.utils import Einfo, eprint, fatal
 
 
 # *****************************************************************************
@@ -133,7 +133,7 @@ def config():
 
     # Parse all options and positional arguments
     #
-    CmdInfo.parseCommandline()
+    CmdInfo.parse_commandline()
 
     # --cchar: Make sure the character is a single character
     #
@@ -149,7 +149,7 @@ def config():
 
     # Propogate the debug flag
     #
-    einfo.doDebug = CmdInfo.opt.dbg
+    Einfo.doDebug = CmdInfo.opt.dbg
 
     # --flavor: Make sure we support any specified flavor
     #
@@ -216,10 +216,14 @@ def config():
         if CmdInfo.opt.display:
             fatal(2, 'Unable to do --display because schema')
     else:
-        get_schema(CmdInfo.opt.schema, CmdInfo.opt.display)
-        if CmdInfo.opt.ver:
-            for inFile in CmdInfo.fIN:
-                chk_schema(inFile)
+        if CmdInfo.opt.schema == 'hdr':
+            CmdInfo.opt.hdr = 0
+        else:
+            Schema.get_schema(CmdInfo.opt.schema, CmdInfo.opt.ato,
+                              CmdInfo.opt.display)
+            if CmdInfo.opt.ver:
+                for inFile in CmdInfo.fIN:
+                    Schema.chk_schema(inFile, CmdInfo.opt.sep)
 
     # Return indicating whether any conversion is needed
     #
@@ -241,10 +245,10 @@ def convert(input, outfile):
 
     try:
         df = pd.read_csv(input, header=CmdInfo.opt.hdr,
-                         names=CmdInfo.colNames,
+                         names=Schema.colNames,
                          sep=CmdInfo.opt.sep, na_values=CmdInfo.opt.nil,
                          keep_default_na=False,
-                         dtype=CmdInfo.colTypes, skiprows=CmdInfo.skipRows)
+                         dtype=Schema.colTypes, skiprows=CmdInfo.skipRows)
     except Exception:  # We don't care what kind it is
         fatal(0, 'Unable to create pandas dataframe')
 
@@ -293,13 +297,13 @@ def convert(input, outfile):
     # Get the column in the read back table and make sure it's consistent
     #
     cvec2_len = len(list(df2))
-    if cvec1_len == cvec2_len and cvec1_len == len(CmdInfo.colNames):
+    if cvec1_len == cvec2_len and cvec1_len == len(Schema.colNames):
         if CmdInfo.blab:
             eprint('Output file', outfile, 'verified with',
                    cvec1_len, 'columns.')
     else:
         eprint('Output file', outfile, 'verification failed.')
-        eprint(len(CmdInfo.colNames), 'cvs cols ->', cvec1_len,
+        eprint(len(Schema.colNames), 'cvs cols ->', cvec1_len,
                'pandas cols ->', cvec2_len, 'parquet cols.')
         exit(77)
 
@@ -321,7 +325,7 @@ if not config():
 # Do some debugging
 #
 if CmdInfo.opt.dbg:
-    eprint('cols=', CmdInfo.colNames, 'type=', CmdInfo.colTypes,
+    eprint('cols=', Schema.colNames, 'type=', Schema.colTypes,
            'opt=', CmdInfo.OPT)
 
 # Process all input files
@@ -360,6 +364,6 @@ for inFile in CmdInfo.fIN:
     # Check if we need to manually handle nulls for integer columns. In any
     # case simply convert the input be it a file of i/o object
     #
-    if CmdInfo.colNVChk:
-        inFile = get_handler(inFile)
+    if Schema.colNVChk:
+        inFile = get_handler(inFile, Schema.colNVChk)
     convert(inFile, outFile)

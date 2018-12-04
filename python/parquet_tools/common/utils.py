@@ -24,11 +24,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-The csv2pq_utils.py module contains utility functions used by the csv2pq
+The utils.py module contains utility functions used by the csv2pq
 command and its associated python modules.
 
 This module provides various functions to make life somewhat easier:
-einfo     - class to control error handling.
+Einfo     - class to control error handling.
 eprint    - print a message to stderr.
 fatal     - print a numbered message to stderr and exit.
 """
@@ -44,8 +44,8 @@ import traceback
 # *                                 e i n f o                                 *
 # *****************************************************************************
 
-class einfo:
-    "Simple class to handle various error."
+class Einfo:
+    "Simple class to controls detailed error messages for debugging."
 
     # Debugging wanted
     #
@@ -105,7 +105,7 @@ def fatal(enum, *argv):
 
     # Produce a traceback if debug is set on.
     #
-    if einfo.doDebug:
+    if Einfo.doDebug:
         traceback.print_stack()
 
     # An enum of zero is reserved for exception printing
