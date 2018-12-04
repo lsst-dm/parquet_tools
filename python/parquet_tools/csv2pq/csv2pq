@@ -1,0 +1,369 @@
+#!/usr/bin/env python3
+#
+# This file is part of parquet_tools.
+#
+# Developed for the LSST Data Management System.
+# This product includes software developed by the LSST Project
+# (http://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+'''
+Usage: csv2pq [options] [infile [outfile]]
+
+Specify 'csv2pq --help' to get the a description of what is needed.
+'''
+
+# *****************************************************************************
+# *                                c s v 2 p q                                *
+# *****************************************************************************
+
+import fileinput
+import os
+import sys
+
+import pandas as pd
+import pyarrow as pa
+
+import pyarrow.parquet as pq
+
+from parquet_tools.csv2pq.cmdinfo import CmdInfo
+
+from parquet_tools.csv2pq.handler import get_handler
+
+from parquet_tools.csv2pq.schema import Schema
+
+from parquet_tools.common.utils import Einfo, eprint, fatal
+
+
+# *****************************************************************************
+# *                        a p p l y _ t e m p l a t e                        *
+# *****************************************************************************
+
+def apply_template(tmplt):
+    """Generate output file names from a template.
+    In:  tmplt - the template to use to generate output file names. The
+                 template is of the form '[=dir/][-sfx][+sfx]'. Where:
+                 =dir/ replaces the input file directory path with 'dir'
+                 -sfx  removes 'sfx' from the end of the input file name.
+                 +sfx  adds 'sfx' to the end of the input file name.
+         Note that the input file names are contained in fIN list of the
+         CmdInfo class and the results will be placed in the fOUT list in
+         the same class in 1-to-1 correspondence. This function return None
+         upon success and exits the program upon failure.
+    """
+
+    # Get optional directory
+    #
+    stmp = tmplt
+    xdir = ''
+    if tmplt[0:1] == '=':
+        n = tmplt.rfind('/')
+        if n < 0:
+            fatal(3, 'directory specification in template', stmp)
+        xdir = tmplt[1:n+1]
+        if n < len(tmplt)-1:
+            tmplt = tmplt[n+1:]
+        else:
+            tmplt = ''
+
+    # Get suffixes
+    #
+    dsfx = ''
+    asfx = ''
+    if tmplt:
+        if tmplt[0:1] == '-' and len(tmplt) > 1:
+            n = tmplt.find('+')
+            if n < 0:
+                dsfx = tmplt[1:]
+                tmplt = ''
+            else:
+                dsfx = tmplt[1:n]
+                tmplt = tmplt[n:]
+        if tmplt[0:1] == '+' and len(tmplt) > 1:
+            asfx = tmplt[1:]
+        else:
+            if tmplt:
+                fatal(3, 'suffix specification in template', stmp)
+
+    # Apply template to generate output file names
+    #
+    for infile in CmdInfo.fIN:
+        if xdir:
+            n = infile.rfind('/')
+            if n >= 0:
+                infile = xdir+infile[n+1:]
+            else:
+                infile = xdir+infile
+
+        if dsfx and infile.endswith(dsfx):
+            infile = infile[0:len(infile)-len(dsfx)]
+
+        if asfx:
+            infile += asfx
+
+        CmdInfo.fOUT.append(infile)
+
+
+# *****************************************************************************
+# *                                c o n f i g                                *
+# *****************************************************************************
+
+def config():
+    """Parse command line options and verify correctness.
+    In:  This function uses information contained in the CmdInfo class.
+    Out: The CmdInfo class variables are modified to reflect the processing
+         that needs to occur. It returns True if conversion is to be done and
+         False if no conversion is needed. This function also exits the
+         program should an error be encountered.
+    """
+
+    # Parse all options and positional arguments
+    #
+    CmdInfo.parse_commandline()
+
+    # --cchar: Make sure the character is a single character
+    #
+    if CmdInfo.opt.cmt and len(CmdInfo.opt.cmt) != 1:
+        fatal(3, 'cchar value', CmdInfo.opt.cmt)
+
+    # --compress: Validate compression selection
+    #
+    ctype = CmdInfo.opt.cmp
+    CmdInfo.opt.cmp = ctype.upper()
+    if CmdInfo.opt.cmp not in CmdInfo.compTypes:
+        fatal(3, 'compression type', ctype)
+
+    # Propogate the debug flag
+    #
+    Einfo.doDebug = CmdInfo.opt.dbg
+
+    # --flavor: Make sure we support any specified flavor
+    #
+    if CmdInfo.opt.flv is not None:
+        if CmdInfo.opt.flv != 'spark':
+            fatal(3, 'flavor', CmdInfo.opt.flv)
+
+    # --header: Adjust header option for later processing and adjust for schema
+    #
+    if CmdInfo.opt.hdr:
+        if CmdInfo.schema is not None:
+            CmdInfo.opt.hdr = None
+            CmdInfo.skipRows = 1
+        else:
+            CmdInfo.opt.hdr = 0
+
+    # --sep: Make sure the seprator character is a single character
+    #
+    if len(CmdInfo.opt.sep) != 1:
+        fatal(3, 'sep value', CmdInfo.opt.sep)
+
+    # --skip: Check for skip/replace action and prime toggle if so
+    #
+    if CmdInfo.opt.rep and CmdInfo.opt.skp:
+        CmdInfo.skipRep = True
+        CmdInfo.opt.rep = False
+
+    # Resolve the input file. If none, then --display must be in effect.
+    # If it isn't a dash, then push it on the input processing list.
+    # Otherwise, push all the files present in stdin on the list.
+    #
+    if CmdInfo.opt.infile != '-':
+        if not CmdInfo.opt.infile and not CmdInfo.opt.display:
+            fatal(2, 'Input file')
+        CmdInfo.fIN.append(CmdInfo.opt.infile)
+    else:
+        try:
+            for line in fileinput.input():
+                infile = line.rstrip('\n')
+                if not os.path.exists(infile):
+                    fatal(6, 'Input file', infile, 'not found')
+                if not os.path.isfile(infile):
+                    fatal(6, 'Input file', infile, 'is not a file')
+                CmdInfo.fIN.append(infile)
+        except Exception:  # We don't care what kind it is
+            fatal(0, 'Unable to get input files from stdin')
+
+    # If an output file is specified, make sure it's contextually compatible
+    # with whatever was specified as the input. If it's a template, apply
+    # it against all input files to generate the output file names.
+    #
+    if CmdInfo.opt.outfile:
+        if CmdInfo.opt.outfile[0:1] in '+-=':
+            apply_template(CmdInfo.opt.outfile)
+        elif len(CmdInfo.fIN) > 1:
+            fatal(1, "non templated output file is " +
+                     "incompatible with multiple input files")
+        else:
+            CmdInfo.fOUT.append(CmdInfo.opt.outfile)
+
+    # Process the schema file. If present, apply schema against all input files
+    #
+    if not CmdInfo.opt.schema:
+        if CmdInfo.opt.display:
+            fatal(2, 'Unable to do --display because schema')
+    else:
+        if CmdInfo.opt.schema == 'hdr':
+            CmdInfo.opt.hdr = 0
+        else:
+            Schema.get_schema(CmdInfo.opt.schema, CmdInfo.opt.ato,
+                              CmdInfo.opt.display)
+            if CmdInfo.opt.ver:
+                for inFile in CmdInfo.fIN:
+                    Schema.chk_schema(inFile, CmdInfo.opt.sep)
+
+    # Return indicating whether any conversion is needed
+    #
+    return len(CmdInfo.fOut) > 0
+
+
+# *****************************************************************************
+# *                               c o n v e r t                               *
+# *****************************************************************************
+
+def convert(input, outfile):
+    """Convert a csv file to a parquet file.
+    In:  input   - Either the path to the input csv file or an IO object that
+                   conatins a read() method. Specifically, it will be a csv2pq
+                   handler object defined in csv2pq.handler.py.
+         outfile - The path to use for he output file.
+    Out: Returns None upon success or exits the program upon failure.
+    """
+
+    try:
+        df = pd.read_csv(input, header=CmdInfo.opt.hdr,
+                         names=Schema.colNames,
+                         sep=CmdInfo.opt.sep, na_values=CmdInfo.opt.nil,
+                         keep_default_na=False,
+                         dtype=Schema.colTypes, skiprows=CmdInfo.skipRows)
+    except Exception:  # We don't care what kind it is
+        fatal(0, 'Unable to create pandas dataframe')
+
+    # If we need to verify, get the column list for the data frame
+    #
+    if CmdInfo.opt.ver:
+        cvec1_len = len(list(df))
+
+    # Convert dataframe to a pyarrow table
+    #
+    try:
+        table = pa.Table.from_pandas(df)
+    except Exception:  # We don't care what kind it is
+        fatal(0, 'Unable to create arrow table')
+
+    # Now write out the dataframe as a parquet file (df.to_parquet missing)
+    #
+    try:
+        pq.write_table(table, outfile,
+                       compression=CmdInfo.opt.cmp,
+                       flavor=CmdInfo.opt.flv,
+                       row_group_size=CmdInfo.opt.rgs,
+                       use_dictionary=CmdInfo.opt.dct)
+    except Exception:  # We don't care what kind it is
+        fatal(0, 'Unable to create parquet file')
+
+    # If we are not verifying the write, then exit.
+    #
+    if not CmdInfo.opt.ver:
+        return
+
+    # Read back the table
+    #
+    try:
+        table2 = pa.parquet.read_table(outfile)
+    except Exception:  # We don't care what kind it is
+        fatal(0, 'Unable to read parquet file')
+
+    # Convert it to a pandas table
+    #
+    try:
+        df2 = table2.to_pandas()
+    except Exception:  # We don't care what kind it is
+        fatal(0, 'Unable to convert parquet table to pandas')
+
+    # Get the column in the read back table and make sure it's consistent
+    #
+    cvec2_len = len(list(df2))
+    if cvec1_len == cvec2_len and cvec1_len == len(Schema.colNames):
+        if CmdInfo.blab:
+            eprint('Output file', outfile, 'verified with',
+                   cvec1_len, 'columns.')
+    else:
+        eprint('Output file', outfile, 'verification failed.')
+        eprint(len(Schema.colNames), 'cvs cols ->', cvec1_len,
+               'pandas cols ->', cvec2_len, 'parquet cols.')
+        exit(77)
+
+
+# *****************************************************************************
+# *                          M a i n   P r o g r a m                          *
+# *****************************************************************************
+
+# Make sure we have some arguments
+#
+if len(sys.argv) < 2:
+    fatal(1, 'No arguments specified; use --help option for usage information')
+
+# Parse the command line and determine what to do
+#
+if not config():
+    exit(0)
+
+# Do some debugging
+#
+if CmdInfo.opt.dbg:
+    eprint('cols=', Schema.colNames, 'type=', Schema.colTypes,
+           'opt=', CmdInfo.OPT)
+
+# Process all input files
+#
+for inFile in CmdInfo.fIN:
+
+    # Make sure output file does not exist unless --replace or --skip specified
+    #
+    outFile = CmdInfo.fOUT.pop(0)
+
+    if os.path.exists(outFile):
+        if CmdInfo.skipRep:
+            if not CmdInfo.fOUT or not os.path.exists(CmdInfo.fOUT[0]):
+                CmdInfo.skipRep = False
+                CmdInfo.opt.rep = True
+
+        if CmdInfo.opt.rep:
+            try:
+                os.remove(outFile)
+            except OSError:  # We really don't care what kind it is
+                fatal(0, 'Unable to replace file', outFile)
+        elif CmdInfo.opt.skp:
+            if (CmdInfo.blab):
+                eprint("Skipping file", inFile, "output file",
+                       outFile, "exists.")
+            continue
+
+        else:
+            fatal(6, 'Output file', outFile, 'already exists')
+
+    # Indicate what we are doing
+    #
+    if CmdInfo.blab:
+        eprint("Converting", inFile, "to", outFile, "...")
+
+    # Check if we need to manually handle nulls for integer columns. In any
+    # case simply convert the input be it a file of i/o object
+    #
+    if Schema.colNVChk:
+        inFile = get_handler(inFile, Schema.colNVChk)
+    convert(inFile, outFile)

@@ -1,0 +1,4 @@
+.pytest_cache
+__pycache__/
+parquet_tools.egg-info
+csv2pq.egg-info
