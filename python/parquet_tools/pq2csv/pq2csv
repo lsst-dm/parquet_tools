@@ -22,20 +22,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-Usage: csv2pq [options] [infile [outfile]]
+Usage: pq2csv [options] [infile [outfile]]
 
-Specify 'csv2pq --help' to get the a description of what is needed.
+Specify 'pq2csv --help' to get the a description of what is needed.
 
-This is a stub file to execute csv2pq.py as a command so that the command
-line user does not need to add the '.py' suffix this command line tool and
-allows it to be compiled. This program is not importable.
+This is a stub file to execute pq2csv.py as a command so that the command
+line user does not need to add the '.py' suffix this command line tool.
+This program is not importable.
 """
 
 # *****************************************************************************
-# *                                c s v 2 p q                                *
+# *                                p q 2 c s v                                *
 # *****************************************************************************
 
-from parquet_tools.csv2pq.csv2pq import main
+from parquet_tools.pq2csv.pq2csv import main
 
 # Simply execute the main routine in the python module
 #

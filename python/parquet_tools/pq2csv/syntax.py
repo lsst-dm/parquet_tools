@@ -1,5 +1,5 @@
 # *****************************************************************************
-# *                     c s v 2 p q _ c m d i n f o . p y                     *
+# *                             s y n t a x . p y                             *
 # *****************************************************************************
 #
 # This file is part of parquet_tools.
@@ -26,43 +26,35 @@
 """This module contains variables describing the command line invocation.
 
 This module contains all the variables used to communicate the requirements
-csv2pq command invocation across all related modules.
+pq2csv command invocation across all related modules.
 """
 
-__all__ = ['CmdInfo']
+__all__ = ['syntax']
 
 import argparse
 
-from ..common.typeinfo import TypeInfo
+from parquet_tools.common.typeinfo import TypeInfo
 
 
 # *****************************************************************************
-# *                         d e f i n e C o m m a n d                         *
+# *                                s y n t a x                                *
 # *****************************************************************************
 
-def define_command():
-    "Initialize the definition of the command and return an instance."
+def syntax():
+    """Initialize the definition of the command and return an instance.
+
+    Returns
+    -------
+    opt : 'argparse object'
+        The object that fully describes pq2csv commandline syntax.
+    """
 
     opt = argparse.ArgumentParser(add_help=True, allow_abbrev=False,
-                                  usage='csv2pq [options] [infile [outfile]]',
+                                  usage='pq2csv [options] [infile [outfile]]',
                                   epilog="""The following schema coltypes are
                                   supported: %s. Also, decimal(<p>[,<s>]) is
-                                  supported as a compatibly sized float
-                                  or int.""" % TypeInfo.okTypes)
-
-    opt.add_argument('--auto', action='store_true', default=False,
-                     dest='ato',
-                     help="Ignore type in schema file, use auto conversion.")
-
-    opt.add_argument('--cchar', action='store', default=None,
-                     metavar='C', dest='cmt',
-                     help="Character designating a comment in infile.")
-
-    opt.add_argument('--compress', action='store', default='snappy',
-                     metavar='TYPE', dest='cmp',
-                     help="""The compression algorithm to use; where TYPE is:
-                     brotli, gzip, LZO, LZ4, snappy (default), ZSTD, or none
-                     to disable compression.""")
+                                  supported, which is used to establish
+                                  output precision.""" % TypeInfo.okTypes)
 
     opt.add_argument('--debug', action='store_true', default=False,
                      dest='dbg',
@@ -75,43 +67,39 @@ def define_command():
                      it is checked for consistency with the schema. When
                      outfile is present, infile is converted as well.""")
 
-    opt.add_argument('--flavor', action='store', default=None,
-                     dest='flv',
-                     help="""Output flavor. For spark compatibility specify
-                     'spark'.""")
+    opt.add_argument('--encoding', action='store', default='utf-8',
+                     metavar='T', dest='enc',
+                     help="""The output encoding: ascii or utf-8
+                     (or synonym utf8). The default is utf-8.""")
+
+    opt.add_argument('--f32fmt', action='store', default=None,
+                     metavar='FMT', dest='f32fmt',
+                     help="""The format to be used for float32 values
+                     (default is based on significance).""")
+
+    opt.add_argument('--f64fmt', action='store', default=None,
+                     metavar='FMT', dest='f64fmt',
+                     help="""The format to be used for float64 values
+                     (default is based on significance).""")
 
     opt.add_argument('--header', action='store_true', default=None,
                      dest='hdr',
-                     help="""The infile contains a column name header as the
-                     the first row.""")
+                     help="""Add column names as the first record in
+                     outfile.""")
 
     opt.add_argument('--intnan', action='store', default=0, type=int,
                      metavar='N', dest='nan',
-                     help="""The integer value to use for 'null'
+                     help="""The integer value that was used for 'null'
                      (default is 0).""")
-
-    opt.add_argument('--mmap', action='store_true', default=False,
-                     dest='map',
-                     help="use mmap() to read the input file, if possible.")
-
-    opt.add_argument('--nodict', action='store_false', default=True,
-                     dest='dct',
-                     help="""Do not use dictionary encoding for the
-                     output file,""")
 
     opt.add_argument('--null', action='store', default='\\N',
                      metavar='SEQ', dest='nil',
-                     help="""the csv sequence designating a null value
+                     help="""The csv sequence to use to indicate a null value
                      (default \\N).""")
 
     opt.add_argument('--replace', action='store_true', default=False,
                      dest='rep',
                      help="""Replace the existing outfile.""")
-
-    opt.add_argument('--rgsize', action='store', default=None, type=int,
-                     metavar='N', dest='rgs',
-                     help="""The number of rows per row group
-                     (default all rows).""")
 
     opt.add_argument('--schema', action='store', default=None,
                      metavar='SFN',
@@ -120,7 +108,7 @@ def define_command():
 
     opt.add_argument('--sep', action='store', default=',',
                      metavar='C', dest='sep',
-                     help="""The column field separator character
+                     help="""The column field separator character for outfile
                      (default comma).""")
 
     opt.add_argument('--skip', action='store_true', default=False,
@@ -154,37 +142,3 @@ def define_command():
                      suffix to produce the outfile name.""")
 
     return opt
-
-
-# *****************************************************************************
-# *                               C m d I n f o                               *
-# *****************************************************************************
-
-class CmdInfo:
-
-    # File information
-    #
-    fIN = []          # List of csv files to process
-    fOUT = []         # List of parquet file to produce (1-to-1 corespondence)
-
-    # Command specification
-    #
-    opt = None        # Instance of the argparse object
-
-    # Valid compression types
-    #
-    compTypes = ['NONE', 'SNAPPY', 'GZIP', 'LZO', 'BROTLI', 'LZ4', 'ZST']
-
-    # Skip and replace toggle
-    #
-    skipRep = False
-
-    # Number of rows to skip
-    #
-    skipRows = None
-
-    @classmethod
-    def parse_commandline(cls):
-        "Parse the command line using the command definition."
-
-        cls.opt = define_command().parse_args()
