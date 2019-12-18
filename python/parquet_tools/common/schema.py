@@ -37,8 +37,8 @@ import csv
 import os
 import numpy as np
 
-from ..common.typeinfo import TypeInfo
-from ..common.errhandlers import ErrInfo, FatalError, ParmError
+from .typeinfo import TypeInfo
+from .errhandlers import ErrInfo, FatalError, ParmError
 
 
 # *****************************************************************************
@@ -305,6 +305,7 @@ class Schema:
         Raises
         ------
         ParmError
+            Raised when an unsupported type is encountered.
 
         Notes
         -----
@@ -322,9 +323,9 @@ class Schema:
 
         # Check for character type and decimal type
         #
-        if xtype[0:4] == 'char' or xtype[0:7] == 'varchar':
+        if xtype.startwith('char') or xtype.startwith('varchar'):
             xtype = 'char'
-        elif xtype[0:8] == 'decimal(':
+        elif xtype.startwith('decimal('):
             xtype = Schema._get_dectype(xtype[8:], cname)
         else:
             # Record columns that have float or double types.
@@ -338,7 +339,7 @@ class Schema:
                 raise ParmError(4, cname, ctype)
 
         # All types must be found in our name to numpy dictionary. We have
-        # screened for ths but just on case we check again.
+        # screened for this but just in case we check again.
         #
         try:
             nptype = TypeInfo.table[xtype]
@@ -371,7 +372,9 @@ class Schema:
         Raises
         -------
         FatalError
+            Raised when an unknown or unexpected exception occurs.
         ParmError
+            Raised when a processing error is encountered with infile.
         """
 
         # Screen for the common error here.
@@ -448,11 +451,14 @@ class Schema:
         Raises
         ------
         FatalError
+            Raised when an unknown or unexpected exception occurs.
+        ParmError
+            Raised when the schfile is not found or has the wrong format.
 
         Notes
         -----
         - This method completes the column information so that a csv file
-          can be correctly be converted to a parquet file ir vice versa.
+          can be correctly be converted to a parquet file or vice versa.
         - Each line in schema file is toknized, and parsed to obtain the
           column name and associated data type. Also, if there are null
           non-float columns those columns are recorded in colNVChk. This
@@ -521,6 +527,7 @@ class Schema:
         Raises
         ------
         FatalError
+            Raised when a conversion error occurs.
         """
 
         # If there are no null values at all, simply return.

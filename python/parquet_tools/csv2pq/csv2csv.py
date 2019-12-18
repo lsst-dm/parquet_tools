@@ -51,14 +51,10 @@ class Csv2Csv(object):
     infile : 'string'
         The path to the file that should be preprocessed.
 
-    Returns
-    -------
-    Result : 'object'
-
     Raises
     ------
     FatalError
-    ParmError
+        Raised when infile cannot be opened.
     """
 
     _cmtC = '#'    # Character indicating a comment line.
@@ -124,7 +120,7 @@ class Csv2Csv(object):
             return ''      # On EOF return the null string
         except Exception as exc:  # We don't care what it is
             raise FatalError(exc, 'Unable to convert csv row', self.nRow,
-                  'in file', self.csvF.name)
+                             'in file', self.csvF.name)
 
         # Validate we have the correct number of columns.
         #
@@ -134,9 +130,9 @@ class Csv2Csv(object):
         if Csv2Csv._nCol > 0:
             if len(row) != Csv2Csv._nCol:
                 raise ParmError(7, 'In file "' + self.csvF.name + '" record',
-                      self.nRow, 'has', len(row),
-                      'columns but schema defines only',
-                      Csv2Csv._nCol, 'columns')
+                                self.nRow, 'has', len(row),
+                                'columns but schema defines only',
+                                Csv2Csv._nCol, 'columns')
 
         # Look at all columns that we need to preprocess null values
         #

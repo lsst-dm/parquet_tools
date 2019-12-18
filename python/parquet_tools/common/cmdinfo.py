@@ -55,26 +55,22 @@ class CmdInfo:
         Parameters
         ----------
         apobj : 'argprase object'
+               The argparse object encapsulating the command definition.
 
         Raises
         ------
         ParmError
-
+            Raised whenever a command syntax error is encountered, including
+            invalid parameter values.
         """
 
         # Parse the command line
-        #
         cls.opt = apobj.parse_args()
 
         # Propogate the debug flag if present.
-        #
         if hasattr(cls.opt, 'dbg'):
             ErrInfo.set_debug(cls.opt.dbg)
 
-        # Validate common options if they are present.
-        #
-
         # --sep: Make sure the seprator character is a single character
-        #
         if hasattr(cls.opt, 'sep') and len(cls.opt.sep) != 1:
             raise ParmError(3, 'sep value', cls.opt.sep)

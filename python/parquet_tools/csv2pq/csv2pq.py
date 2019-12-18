@@ -61,7 +61,9 @@ def config():
     Raises
     ------
     FatalError
+        Raised when an unknown or unexpected exception occurs.
     ParmError
+        Raised when an invalid parameter is passed to this method.
 
     Returns
     -------
@@ -95,10 +97,10 @@ def config():
     if CmdInfo.opt.hdr:
         if CmdInfo.schema is not None:
             CmdInfo.opt.hdr = None
-            setattr(CmdInfo, 'skipRows', 1)
+            CmdInfo.skipRows = 1
         else:
             CmdInfo.opt.hdr = 0
-            setattr(CmdInfo, 'skipRows', None)
+            CmdInfo.skipRows = None
 
     # Resolve the input file. If none, then a schema --display must be in
     # effect and no input files are required.
@@ -145,6 +147,7 @@ def convert(input, outfile):
     Raises
     ------
     FatalError
+        Raised when an unknown or unexpected exception occurs.
     """
 
     # Read the csv file and convert it to a pandas dataframe.
@@ -191,7 +194,7 @@ def main():
     """Sequence the execution of csv2pq.
 
     Notes
-    ----_
+    -----
     - This function exits the from with a non-zero return code upon failure.
     """
 

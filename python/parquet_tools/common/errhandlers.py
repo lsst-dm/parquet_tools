@@ -58,13 +58,12 @@ class ErrInfo:
         Parameters
         ----------
         args : 'varies'
-            The are the positional argumentgs to the print function.
+            These are the positional argumentgs to the print function.
         kwargs : 'varies'
-            The are the positional argumentgs to the print function.
+            These are the positional argumentgs to the print function.
         """
 
         # Simply print the message prefixed by out command name.
-        #
         print(cls.cmdname, *args, file=sys.stderr, **kwargs)
 
     # *************************************************************************
@@ -101,7 +100,6 @@ class FatalError(Exception, ErrInfo):
     def __init__(self, ex, *args):
 
         # Produce a stack trace if debuggging is enabled.
-        #
         if ErrInfo.doDebug:
             traceback.print_exception(type(ex), ex, ex.__traceback__)
 
@@ -111,7 +109,6 @@ class FatalError(Exception, ErrInfo):
               type(ex).__name__ + ' exception: ' + str(ex)
 
         # Initialize the exception object with the message.
-        #
         Exception.__init__(self, msg)
 
     def __context__(self):
@@ -133,7 +130,7 @@ class ParmError(Exception, ErrInfo):
         Printable tokens providing context for the error.
 
     Notes
-    _____
+    -----
     - The following message format numbers are defined:
       1: <joins all tokens with a space>.
       2: :{0} not specified.
@@ -141,24 +138,21 @@ class ParmError(Exception, ErrInfo):
       4: Column "{0}" has an unsupported type "{1}".
       5: "{0}" and "{1}" are mutually exclusive.
       6: {0} "{1}" {2}.
-    = Any number not defined above produces the message:
+    - Any number not defined above produces the message:
       Message {msgnum} not found.
     """
 
     def __init__(self, msgnum, *args):
 
         # Print a stack trace if debugging is enabled.
-        #
         if ErrInfo.doDebug:
             traceback.print_stack()
 
         # Message format 1 is special. It only stringifies the tokens.
-        #
         if msgnum == 1:
             msg = ' '.join(str(x) for x in args)
 
         # Unpack the message tokens, converting everything to a string.
-        #
         else:
             tok = []
             for x in args:
@@ -166,7 +160,6 @@ class ParmError(Exception, ErrInfo):
             tok.extend(('', '', ''))
 
             # Format the message according the the number given.
-            #
             if msgnum == 2:
                 msg = tok[0] + ' not specified'
             elif msgnum == 3:
@@ -183,7 +176,6 @@ class ParmError(Exception, ErrInfo):
                 msg = 'Message ' + str(msgnum) + ' not found'
 
         # Initialize the exception object with the message.
-        #
         Exception.__init__(self, msg + '.')
 
     def __context__(self):

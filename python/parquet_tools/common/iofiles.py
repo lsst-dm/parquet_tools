@@ -26,7 +26,7 @@ It is used as a helper class to control the flow of execution.
 
 import os
 
-from ..common.errhandlers import ErrInfo, FatalError, ParmError
+from .errhandlers import ErrInfo, FatalError, ParmError
 
 
 # *****************************************************************************
@@ -62,6 +62,7 @@ class IOFiles:
         Raises
         ------
         ParmError
+            Raised when an invalid template is passed to this method.
 
         Notes
         -----
@@ -81,29 +82,28 @@ class IOFiles:
         if tmplt[0:1] == '=':
             n = tmplt.rfind('/')
             if n < 0:
-                raise FatalError(3, 'directory specification in template',
-                                 stmp)
-            xdir = tmplt[1:n+1]
-            if n < len(tmplt)-1:
-                tmplt = tmplt[n+1:]
+                raise ParmError(3, 'directory specification in template', stmp)
+            xdir = tmplt[1:n + 1]
+            if n < len(tmplt) - 1:
+                tmplt = tmplt[n + 1:]
             else:
                 tmplt = ''
 
         # Get suffixes
         #
-        dsfx = ''
-        asfx = ''
+        dirsfx = ''
+        endsfx = ''
         if tmplt:
             if tmplt[0:1] == '-' and len(tmplt) > 1:
                 n = tmplt.find('+')
                 if n < 0:
-                    dsfx = tmplt[1:]
+                    dirsfx = tmplt[1:]
                     tmplt = ''
                 else:
-                    dsfx = tmplt[1:n]
+                    dirsfx = tmplt[1:n]
                     tmplt = tmplt[n:]
             if tmplt[0:1] == '+' and len(tmplt) > 1:
-                asfx = tmplt[1:]
+                endsfx = tmplt[1:]
             else:
                 if tmplt:
                     raise ParmError(3, 'suffix specification in template',
@@ -115,15 +115,15 @@ class IOFiles:
             if xdir:
                 n = infile.rfind('/')
                 if n >= 0:
-                    infile = xdir+infile[n+1:]
+                    infile = xdir+infile[n + 1:]
                 else:
-                    infile = xdir+infile
+                    infile = xdir + infile
 
-            if dsfx and infile.endswith(dsfx):
-                infile = infile[0:len(infile)-len(dsfx)]
+            if dirsfx and infile.endswith(dirsfx):
+                infile = infile[0:len(infile) - len(dirsfx)]
 
-            if asfx:
-                infile += asfx
+            if endsfx:
+                infile += endsfx
 
             IOFiles.fOUT.append(infile)
 
@@ -142,6 +142,7 @@ class IOFiles:
         Raises
         ------
         ParmError
+            Raised when the infile doesn't exist or is not a file.
 
         Returns
         -------
@@ -169,6 +170,7 @@ class IOFiles:
         Raises
         ------
         FatalError
+            Raised when the input file list cannot be obtained from stdin.
 
         Returns
         -------
@@ -211,6 +213,7 @@ class IOFiles:
         Raises
         ------
         ParmError
+            Raised when the outfile is incompatible with the infile template.
 
         Notes
         -----
@@ -240,7 +243,9 @@ class IOFiles:
         Raises
         ------
         FatalError
+            Raised when the output file cannot be replaced.
         ParmError
+            Raised when the output file already exists and cannot be skipped.
 
         Returns
         -------
@@ -253,7 +258,7 @@ class IOFiles:
         # Get an input and the corresponding output file. We may have more
         # input files than output files. That is OK.
         #
-        while len(IOFiles.fIN):
+        while IOFiles.fIN:
             infile = IOFiles.fIN.pop(0)
             if IOFiles.fOUT:
                 outfile = IOFiles.fOUT.pop(0)

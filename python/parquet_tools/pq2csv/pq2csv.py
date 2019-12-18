@@ -65,7 +65,9 @@ def convert(infile, outfile):
     Raises
     -------
     FatalError
+        Raised when an unknown or unexpected exception occurs.
     ParmError
+        Raised when an invalid file is passed to this method.
     """
 
     # Convert input file to a pandas dataframe
@@ -116,7 +118,9 @@ def config():
     Raises
     -------
     FatalError
+        Raised when an unknown or unexpected exception occurs.
     ParmError
+        Raised when an invalid parameter is passed to this method.
 
     Returns
     -------
