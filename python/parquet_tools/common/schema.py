@@ -323,9 +323,9 @@ class Schema:
 
         # Check for character type and decimal type
         #
-        if xtype.startwith('char') or xtype.startwith('varchar'):
+        if xtype.startswith('char') or xtype.startswith('varchar'):
             xtype = 'char'
-        elif xtype.startwith('decimal('):
+        elif xtype.startswith('decimal('):
             xtype = Schema._get_dectype(xtype[8:], cname)
         else:
             # Record columns that have float or double types.
