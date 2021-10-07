@@ -101,6 +101,12 @@ def syntax():
                      dest='rep',
                      help="""Replace the existing outfile.""")
 
+    opt.add_argument('--resetindex', action='store_true', default=True,
+                     dest='resetindex',
+                     help="""Reset the index of the dataframe to default
+                     indexing or to reset multilevel index. By doing so,
+                     the original index gets converted to a column.""")
+
     opt.add_argument('--schema', action='store', default=None,
                      metavar='SFN',
                      help="""The file that describes the schema. The format is:

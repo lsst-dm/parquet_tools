@@ -74,9 +74,11 @@ def convert(infile, outfile):
     #
     try:
         df = pq.read_table(infile).to_pandas()
-        df.reset_index(inplace=True)
     except Exception as exc:  # We don't care what kind it is
         raise FatalError(exc, 'Unable to create pandas dataframe from', infile)
+
+    if CmdInfo.opt.resetindex:
+        df.reset_index(inplace=True)
 
     # If a schema was specified, then we need to do some additional work
     #
