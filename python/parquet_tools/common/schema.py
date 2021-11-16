@@ -668,7 +668,9 @@ class Schema:
             verification succeeded. Otherwise, a null list is returned.
         """
 
-        # Make sure each column is in the schema with the correct type.
+        # Make sure each column is in the schema with the correct type. Note
+        # that current numpy datetime64 types no longer derive from the Python
+        # making it impossible to test equivalence other than textually.
         #
         isaok = True
         ncols = 0
@@ -679,10 +681,15 @@ class Schema:
                 ptype = df[cname].dtype
                 if ptype == 'object':
                     ptype = np.bytes_
-                if stype != ptype:
+                if stype == ptype:
+                    isOK = True;
+                else:
+                    isOK = str(ptype).startswith("datetime64") and \
+                           'datetime64' in str(stype)
+                if not isOK:
                     ErrInfo.say("column '" + cname + "' has wrong datatype;",
                                 "parquet is", str(ptype), "while schema is",
-                                str(stype) + ".")
+                                str(stype) + ". isinstance=" + str(yno))
                     if not blab:
                         return []
                     isaok = False
@@ -696,7 +703,7 @@ class Schema:
         # Verify that column counts match
         #
         if ncols != len(Schema.colTypes):
-            ErrInfo.say('Derived schema with', len(Schema.colTypes),
+            ErrInfo.say('Schema with', len(Schema.colTypes),
                         'cols does not match the data with', ncols, 'cols.')
             isaok = False
 
