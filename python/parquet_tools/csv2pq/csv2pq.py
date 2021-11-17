@@ -94,13 +94,13 @@ def config():
     # --header: Adjust header option for later processing and add ttribute
     # indicating how many rows need to be skipped.
     #
+    CmdInfo.skipRows = None
     if CmdInfo.opt.hdr:
         if CmdInfo.schema is not None:
             CmdInfo.opt.hdr = None
             CmdInfo.skipRows = 1
         else:
             CmdInfo.opt.hdr = 0
-            CmdInfo.skipRows = None
 
     # Resolve the input file. If none, then a schema --display must be in
     # effect and no input files are required.

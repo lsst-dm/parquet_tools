@@ -92,10 +92,11 @@ def convert(infile, outfile):
 
     # If there is an output file, do the conversion. Otherwise, this is only
     # a verification only call. If we are writing out a file normalize the
-    # dataframe to correspond to the actual original schema.
+    # dataframe to correspond to the actual original schema with requested
+    # formatting modifications.
     #
     if outfile:
-        Schema.normalize(df, CmdInfo.opt.nil)
+        Schema.normalize(df, CmdInfo.opt.nil, CmdInfo.opt.b2i, CmdInfo.opt.i2n)
         try:
             df.to_csv(outfile, sep=CmdInfo.opt.sep, na_rep=CmdInfo.opt.nil,
                       float_format='%.7f', encoding=CmdInfo.opt.enc,

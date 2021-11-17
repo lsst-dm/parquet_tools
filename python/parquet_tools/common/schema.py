@@ -86,6 +86,9 @@ class Schema:
           _cNameMax variable and adds the name to the class colNames list.
         """
 
+        if isinstance(cname, int):
+            cname = str(cname)
+
         Schema.colNames.append(cname)
         if len(cname) > Schema._cNameMax:
             Schema._cNameMax = len(cname)
@@ -555,7 +558,7 @@ class Schema:
     # *                           n o r m a l i z e                           *
     # *************************************************************************
     @classmethod
-    def normalize(cls, df, nilval):
+    def normalize(cls, df, nilval, mapbool, inf2nan):
         """Normalize a PANDAS dataframe to correspond to the original schema.
 
         Parameters
@@ -577,6 +580,18 @@ class Schema:
         #
         if Schema.colNVChk:
             Schema._revert2null(df, nilval)
+
+        # If bool values are to be represented as 1 and 0, do so
+        #
+        if mapbool:
+            bcols = list(df.select_dtypes(['bool']).columns)
+            if bcols:
+                df[bcols] = df[bcols].astype(int)
+
+        # If inf values are to be represented as nulls, do so
+        #
+        if inf2nan:
+            df.replace([np.inf, -np.inf], np.nan,inplace=True)
 
         # If we had any fixed point types are are being represented as floats,
         # format the floats using the original precision.
@@ -695,7 +710,7 @@ class Schema:
                     isaok = False
             except KeyError:
                 ErrInfo.say("parquet file contains non-schema column '"
-                            + cname + "'.")
+                            + str(cname) + "'.")
                 if not blab:
                     return []
                 isaok = False

@@ -56,6 +56,11 @@ def syntax():
                                   supported, which is used to establish
                                   output precision.""" % TypeInfo.okTypes)
 
+    opt.add_argument('--bool2int', action='store_true', default=False,
+                     dest='b2i',
+                     help="""Map False to 0 and True to 1 on output
+                     (default does not map).""")
+
     opt.add_argument('--debug', action='store_true', default=False,
                      dest='dbg',
                      help="""Enable debug output (e.g. a stack trace on fatal
@@ -86,6 +91,11 @@ def syntax():
                      dest='hdr',
                      help="""Add column names as the first record in
                      outfile.""")
+
+    opt.add_argument('--inf2nan', action='store_true', default=False,
+                     dest='i2n',
+                     help="""Interpret float/double inf value as 'null'
+                     (default keeps value as inf).""")
 
     opt.add_argument('--intnan', action='store', default=0, type=int,
                      metavar='N', dest='nan',
