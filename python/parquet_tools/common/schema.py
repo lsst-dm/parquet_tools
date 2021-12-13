@@ -77,7 +77,7 @@ class Schema:
 
         Parameters
         ----------
-        cname : 'string'
+        cname : 'string' or 'int'
             The name of the column.
 
         Notes
@@ -567,6 +567,10 @@ class Schema:
             The pandas dataframe to be normalized.
         nilval : 'string'
             This is the sequence that defines a "null" value.
+        mapbool : 'bool'
+            When true, boolean values should be converted to int 0 or 1.
+        inf2nan : 'bool'
+            When true, inf values should be converted nan.
 
         Notes
         - Normalization is defined as: a) null values are returned to integer
