@@ -1,0 +1,12 @@
+### Direct python package requirements ###
+
+numpy >= 1.19.5
+pandas >= 1.1.5
+pyarrow >= 6.0.0
+
+### RPM dependencies in pyarrow.parquet ###
+
+# parquet-devel >= 6.0.0
+# parquet-glib-devel >= 6.0.0
+# parquet-glib-libs >= 6.0.0
+# parquet-libs >= 6.0.0
