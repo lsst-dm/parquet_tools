@@ -56,6 +56,18 @@ def syntax():
                                   supported, which is used to establish
                                   output precision.""" % TypeInfo.okTypes)
 
+    opt.add_argument('--addindex', action='store_const', default=None,
+                     const='', dest='addindex',
+                     help="""Imports the index as data columns. Column names
+                     correspond to the index names. By default, indices are
+                     not dded to the csv file.""")
+
+    opt.add_argument('--addindex2', action='store', default=None,
+                     metavar='ASNAME', nargs=1, dest='addindex',
+                     help="""Same as --addindex but allows you to assign the
+                     column name; i.e. ASNAME. This is only works for a single
+                     level index.""")
+
     opt.add_argument('--bool2int', action='store_true', default=False,
                      dest='b2i',
                      help="""Map False to 0 and True to 1 on output
