@@ -60,7 +60,7 @@ def syntax():
                      const='', dest='addindex',
                      help="""Imports the index as data columns. Column names
                      correspond to the index names. By default, indices are
-                     not dded to the csv file.""")
+                     not added to the csv file.""")
 
     opt.add_argument('--addindex2', action='store', default=None,
                      metavar='ASNAME', nargs=1, dest='addindex',
